@@ -6,16 +6,27 @@ import json   # 处理 JSON 文件（保存/读取对话历史）
 import os     # 检查文件是否存在
 import sys    # 程序退出时使用
 import logging  # 日志系统
+from logging.handlers import TimedRotatingFileHandler
 
 # ==================== 1. 配置日志 ====================
-# 设置日志格式和输出位置
+# 创建按天滚动的 handler
+file_handler = TimedRotatingFileHandler(
+    filename="chat.log",          # 基础文件名，实际写入的文件是 chat.log
+    when="midnight",              # 滚动时间点：每天午夜
+    interval=1,                   # 间隔 1 天（配合 when 使用）
+    backupCount=30,               # 保留最近 30 个备份文件
+    encoding="utf-8"              # 编码
+)
+
+# 设置日志格式（原来在 basicConfig 里也定义了，这里需要保持一致）
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+
+# 修改 basicConfig 的 handlers 参数
 logging.basicConfig(
-    level=logging.INFO,   # 记录 INFO 级别及以上的日志（INFO, WARNING, ERROR）
-    format='%(asctime)s - %(levelname)s - %(message)s',  # 时间 - 级别 - 消息
-    handlers=[
-        logging.FileHandler("chat.log", encoding="utf-8"),  # 写入文件 chat.log
-        # logging.StreamHandler()  # 同时输出到控制台
-    ]
+    level=logging.INFO,
+    handlers=[file_handler]       # 用新 handler 替换原来的 FileHandler
 )
 
 # ====================================================
