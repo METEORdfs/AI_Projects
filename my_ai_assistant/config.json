@@ -1,0 +1,7 @@
+{
+  "model": "qwen2.5:7b-instruct",
+  "base_url": "http://localhost:11434/v1",
+  "api_key": "dummy",
+  "temperature": 0.9,
+  "memory_file": "chat_history.json"
+}
