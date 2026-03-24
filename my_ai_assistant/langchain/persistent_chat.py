@@ -2,33 +2,65 @@
 from langchain_openai import ChatOpenAI          # 连接本地 Ollama 的 OpenAI 兼容接口
 from langchain.memory import ConversationBufferMemory  # 管理对话记忆
 from langchain.chains import ConversationChain          # 把记忆和模型串成对话链
-import json   # 处理 JSON 文件（保存/读取对话历史）
-import os     # 检查文件是否存在
-import sys    # 程序退出时使用
-import logging  # 日志系统
-from logging.handlers import TimedRotatingFileHandler
+import json          # 处理 JSON 文件（保存/读取对话历史）
+import os            # 检查文件是否存在
+import sys           # 程序退出时使用
+import logging       # 日志系统
+import time          # 时间处理，用于日志文件名格式化
+from logging.handlers import TimedRotatingFileHandler  # 按时间滚动的日志处理器基类
 
 # ==================== 1. 配置日志 ====================
-# 创建按天滚动的 handler
-file_handler = TimedRotatingFileHandler(
+import time
+from logging.handlers import TimedRotatingFileHandler
+
+# 自定义按天滚动，备份文件名为 chat.log.2026-03-24 格式
+class DailyRotatingFileHandler(TimedRotatingFileHandler):
+    def doRollover(self):
+        """滚动时，将当前日志文件重命名为带日期的备份文件，然后新建空文件"""
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+
+        # 计算备份文件的时间戳（滚动前一刻）
+        current_time = int(self.rolloverAt - self.interval)
+        time_tuple = time.localtime(current_time)
+        dfn = self.baseFilename + "." + time.strftime(self.suffix, time_tuple)
+
+        # 如果备份文件已存在，先删除（避免冲突）
+        if os.path.exists(dfn):
+            os.remove(dfn)
+
+        # 重命名当前日志文件为备份文件
+        os.rename(self.baseFilename, dfn)
+
+        # 清理超过 backupCount 的旧文件
+        if self.backupCount > 0:
+            for s in self.getFilesToDelete():
+                os.remove(s)
+
+        # 重新打开新日志文件
+        self.stream = self._open()
+        self.rolloverAt = self.rolloverAt + self.interval
+
+# 创建 handler 实例
+file_handler = DailyRotatingFileHandler(
     filename="chat.log",          # 基础文件名，实际写入的文件是 chat.log
     when="midnight",              # 滚动时间点：每天午夜
-    interval=1,                   # 间隔 1 天（配合 when 使用）
+    interval=1,                   # 间隔 1 天
     backupCount=30,               # 保留最近 30 个备份文件
-    encoding="utf-8"              # 编码
+    encoding="utf-8",             # 编码
+    suffix="%Y-%m-%d"             # 备份文件后缀格式，如 chat.log.2026-03-24
 )
 
-# 设置日志格式（原来在 basicConfig 里也定义了，这里需要保持一致）
+# 设置日志格式
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 file_handler.setFormatter(formatter)
 
-
-# 修改 basicConfig 的 handlers 参数
+# 配置 root logger
 logging.basicConfig(
     level=logging.INFO,
-    handlers=[file_handler]       # 用新 handler 替换原来的 FileHandler
+    handlers=[file_handler]
 )
-
 # ====================================================
 
 # ==================== 2. 加载配置文件 ====================
