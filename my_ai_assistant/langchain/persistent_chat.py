@@ -8,18 +8,19 @@ import sys           # 程序退出时使用
 import logging       # 日志系统
 import time          # 时间处理，用于日志文件名格式化
 from logging.handlers import TimedRotatingFileHandler  # 按时间滚动的日志处理器基类
+from typing import Optional, TextIO
 
 # ==================== 1. 配置日志 ====================
-import time
-from logging.handlers import TimedRotatingFileHandler
-
 # 自定义按天滚动，备份文件名为 chat.log.2026-03-24 格式
 class DailyRotatingFileHandler(TimedRotatingFileHandler):
+    # 重新声明 stream 为 Optional 类型，覆盖基类的严格类型
+    stream: Optional[TextIO] = None
     def doRollover(self):
         """滚动时，将当前日志文件重命名为带日期的备份文件，然后新建空文件"""
         if self.stream:
             self.stream.close()
             self.stream = None
+            
 
         # 计算备份文件的时间戳（滚动前一刻）
         current_time = int(self.rolloverAt - self.interval)
@@ -48,9 +49,9 @@ file_handler = DailyRotatingFileHandler(
     when="midnight",              # 滚动时间点：每天午夜
     interval=1,                   # 间隔 1 天
     backupCount=30,               # 保留最近 30 个备份文件
-    encoding="utf-8",             # 编码
-    suffix="%Y-%m-%d"             # 备份文件后缀格式，如 chat.log.2026-03-24
+    encoding="utf-8"             # 编码
 )
+suffix="%Y-%m-%d"             # 备份文件后缀格式，如 chat.log.2026-03-24
 
 # 设置日志格式
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
